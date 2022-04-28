@@ -1,13 +1,14 @@
 #!/usr/bin/python3
 
-from time import sleep, strftime, time
 import sys
+import os
+from time import sleep, strftime, time
 import datetime
 import asyncio
 import keyboard
 import glob
 import RPi.GPIO as GPIO
-from hx711 import HX711
+from libraries.hx711 import HX711
 from signal import pause
 
 REF_UNIT = 100
@@ -15,13 +16,12 @@ DOUT_PIN = 5
 PD_SCK_PIN = 6
 CAL_VAL = 2.1745
 LOGFILE = "Strain_Data.csv"
-LOG_DIRECTORY = "/data/"
+LOG_DIRECTORY_PARENT = "./data/"
 
 #Exit Function
 def cleanAndExit():
     print("Cleaning.")
-    if not EMULATE_HX711:
-        GPIO.cleanup()
+    GPIO.cleanup()
     print("Bye.")
     sys.exit()
 
@@ -42,25 +42,33 @@ def print_data(val):
     print(str(datetime.datetime.now()))
     print("Current Weight:", val, "g\n")
 
+#Creates data directory
+def create_dir():
+    try:
+        os.mkdir(LOG_DIRECTORY_PARENT)
+    except OSError as error:
+        print("Data directory exists")
+
 #Opens & returns log object
 def open_log():
+    create_dir()
     filename = LOGFILE
     if len(sys.argv) > 1:
         filename = sys.argv[1]
 
-    filename = LOG_DIRECTORY + filename
+    filename = os.path.join(LOG_DIRECTORY_PARENT, filename)
     log = open(filename, "a")
     return log
 
 #Writes data to logfile
 def write_data_file(data, log):
-    log.write("{0},{1}\n".format(strftime("%Y-%m-%d %H:%M:%S"),str(data)))
     log.write("{0},{1}\n".format(str(datetime.datetime.now()),str(data)))
 
 #Returns the average of all data points in the list.
 def getAverage(arr):
     return (sum(arr[len(arr) - 5:len(arr) - 1])/5) + 2
 
+#Runs main script
 def main():
     movingaverage = 1 #This is holds the moving average that will be used to determine recording frequency
 
