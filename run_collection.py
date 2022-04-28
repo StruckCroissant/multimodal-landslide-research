@@ -13,9 +13,10 @@ DOUT_PIN = 5
 PD_SCK_PIN = 6
 CAL_VAL = 2.1745
 LOGFILE = "Strain_Data.csv"
-LOG_DIRECTORY = "./data/"
+LOG_DIRECTORY = "/data/"
 
 #Set up HX711 Driver
+sys.path.insert(0, '/libraries')
 EMULATE_HX711=False
 if not EMULATE_HX711:
     import RPi.GPIO as GPIO
