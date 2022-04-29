@@ -33,14 +33,18 @@ def init_sensor():
     hx.tare()
     return hx
 
-#Get weight reading from hx object
+#Get weight reading from hx object, pair with timestamp
 def get_weight(hx):
-    return hx.get_weight(1) / CAL_VAL
+    data = {
+        "val" : str(hx.get_weight(1)),
+        "timestamp" : str(datetime.datetime.now())
+    }
+    return data
 
 #Prints data to terminal
-def print_data(val):
-    print(str(datetime.datetime.now()))
-    print("Current Weight:", val, "g\n")
+def print_data(data):
+    print(data['timestamp'])
+    print("Current Weight:", data['val'], "g\n")
 
 #Creates data directory
 def create_dir():
@@ -62,7 +66,7 @@ def open_log():
 
 #Writes data to logfile
 def write_data_file(data, log):
-    log.write("{0},{1}\n".format(str(datetime.datetime.now()),str(data)))
+    log.write("{0},{1}\n".format(data['timestamp'], data['val']))
 
 #Returns the average of all data points in the list.
 def getAverage(arr):
@@ -70,29 +74,25 @@ def getAverage(arr):
 
 #Runs main script
 def main():
-    movingaverage = 1 #This is holds the moving average that will be used to determine recording frequency
-
     hx = init_sensor()
     keyboard.add_hotkey('0', hx.tare())
-    go = True
+    running = True
     slowmode = False #determines if slow mode is currently on
     subset = 0 #tracks the amount of subsets processed
     arr = []
     log = open_log()
 
     try:
-        while (go):
-            val = get_weight(hx)
-            valtime = datetime.datetime.now() #timestamp
-            arr.append(val)
-            print_data(val)
+        while (running):
+            data = get_weight(hx)
+            arr.append(data['val'])
+            print_data(data)
             write_data_file(val, log)
-            movingaverage = getAverage(arr)
-
-
+            
             # UNUSED CODE
             # Determines recording frequency on weight increase
             '''
+            movingaverage = getAverage(arr)
             if(val < movingaverage):
                 sleep(0.4122) #slow mode, time.sleep makes rate two points/second
                 if(slowmode == False): #lets user know when slow mode is activated
@@ -114,7 +114,7 @@ def main():
             '''
 
             if keyboard.is_pressed('alt'):
-                go = False
+                running = False
 
     except (KeyboardInterrupt, SystemExit):
             cleanAndExit()
