@@ -1,2 +1,6 @@
-## Ignore local data files
+# Ignore local data files
 *.csv
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
