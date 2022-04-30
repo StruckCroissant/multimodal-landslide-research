@@ -87,7 +87,7 @@ def main():
             data = get_weight(hx)
             arr.append(data['val'])
             print_data(data)
-            write_data_file(val, log)
+            write_data_file(data, log)
             
             # UNUSED CODE
             # Determines recording frequency on weight increase
