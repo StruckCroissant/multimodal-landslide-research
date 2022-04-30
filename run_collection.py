@@ -8,6 +8,7 @@ import asyncio
 import keyboard
 import glob
 import RPi.GPIO as GPIO
+import paho.mqtt.client as mqtt
 from libraries.hx711 import HX711
 from signal import pause
 
@@ -18,6 +19,8 @@ CAL_VAL = 2.1745
 LOGFILE = "Strain_Data.csv"
 LOG_DIRECTORY_PARENT = "./data/"
 TOPIC = "data/strain"
+BROKER_ADDR = "192.168.0.130"
+connected = False
 
 #Exit Function
 def cleanAndExit():
@@ -37,8 +40,8 @@ def init_sensor():
 #Get weight reading from hx object, pair with timestamp
 def get_weight(hx):
     data = {
-        "val" : str(hx.get_weight(1)),
-        "timestamp" : str(datetime.datetime.now())
+        "val" : hx.get_weight(1),
+        "timestamp" : datetime.datetime.now()
     }
     return data
 
@@ -73,6 +76,17 @@ def write_data_file(data, log):
 def getAverage(arr):
     return (sum(arr[len(arr) - 5:len(arr) - 1])/5) + 2
 
+#Runs on connecting to topic
+def on_connect(client, userdata, flags, rc):
+    if rc == 0:
+        print("Connected")
+        connected = True
+        print("..........")
+    else:
+        print("Unable To Connect")
+
+    client.subscribe(TOPIC)
+
 #Runs main script
 def main():
     hx = init_sensor()
@@ -82,14 +96,22 @@ def main():
     subset = 0 #tracks the amount of subsets processed
     arr = []
     log = open_log()
+    
+    client = mqtt.Client("P1")
+    client.on_connect = on_connect
+    
+    print("Connecting to broker...")
+    client.connect(BROKER_ADDR)
+    client.loop_start()
 
     try:
         while (running):
             data = get_weight(hx)
-            arr.append(data['val'])
+            #arr.append(data['val'])
             print_data(data)
             write_data_file(data, log)
-
+            client.publish(TOPIC, "{:},{:.2f}".format(str(data['timestamp']), data['val']))
+            
             # UNUSED CODE
             # Determines recording frequency on weight increase
             '''
@@ -119,6 +141,7 @@ def main():
 
     except (KeyboardInterrupt, SystemExit):
             cleanAndExit()
+            client.stop_loop()
 
 if __name__ == '__main__':
     main()
