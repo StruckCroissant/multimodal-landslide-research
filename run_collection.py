@@ -17,6 +17,7 @@ PD_SCK_PIN = 6
 CAL_VAL = 2.1745
 LOGFILE = "Strain_Data.csv"
 LOG_DIRECTORY_PARENT = "./data/"
+TOPIC = "data/strain"
 
 #Exit Function
 def cleanAndExit():
@@ -88,7 +89,7 @@ def main():
             arr.append(data['val'])
             print_data(data)
             write_data_file(data, log)
-            
+
             # UNUSED CODE
             # Determines recording frequency on weight increase
             '''
