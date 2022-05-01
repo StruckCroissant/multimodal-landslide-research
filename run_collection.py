@@ -48,7 +48,7 @@ def get_weight(hx):
 #Prints data to terminal
 def print_data(data):
     print(data['timestamp'])
-    print("Current Weight:", data['val'], "g\n")
+    print("Current Weight:", "{:0.2f}".format(data['val']), "g\n")
 
 #Creates data directory
 def create_dir():
@@ -70,14 +70,14 @@ def open_log():
 
 #Writes data to logfile
 def write_data_file(data, log):
-    log.write("{0},{1}\n".format(data['timestamp'], data['val']))
+    log.write("{:},{:0.2f}\n".format(data['timestamp'], data['val']))
 
 #Returns the average of all data points in the list.
 def getAverage(arr):
     return (sum(arr[len(arr) - 5:len(arr) - 1])/5) + 2
 
 #Runs on connecting to topic
-def on_connect(client, userdata, flags, rc):
+def _on_connect(client, userdata, flags, rc):
     if rc == 0:
         print("Connected")
         connected = True
@@ -97,9 +97,9 @@ def main():
     arr = []
     log = open_log()
     
-    client = mqtt.Client("P1")
-    client.on_connect = on_connect
-    
+    client = mqtt.Client(clean_session=True, client_id="client")
+    client.on_connect = _on_connect
+    #Connects & automatically starts seperate event loop/thread
     print("Connecting to broker...")
     client.connect(BROKER_ADDR)
     client.loop_start()
@@ -110,7 +110,7 @@ def main():
             #arr.append(data['val'])
             print_data(data)
             write_data_file(data, log)
-            client.publish(TOPIC, "{:},{:.2f}".format(str(data['timestamp']), data['val']))
+            client.publish(TOPIC, "{:},{:.2f}".format(data['timestamp'], data['val']))
             
             # UNUSED CODE
             # Determines recording frequency on weight increase
