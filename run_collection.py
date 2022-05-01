@@ -8,6 +8,7 @@ import asyncio
 import keyboard
 import glob
 import RPi.GPIO as GPIO
+import paho.mqtt.client as mqtt
 from libraries.hx711 import HX711
 from signal import pause
 
@@ -17,6 +18,9 @@ PD_SCK_PIN = 6
 CAL_VAL = 2.1745
 LOGFILE = "Strain_Data.csv"
 LOG_DIRECTORY_PARENT = "./data/"
+TOPIC = "data/strain"
+BROKER_ADDR = "192.168.0.130"
+connected = False
 
 #Exit Function
 def cleanAndExit():
@@ -33,14 +37,18 @@ def init_sensor():
     hx.tare()
     return hx
 
-#Get weight reading from hx object
+#Get weight reading from hx object, pair with timestamp
 def get_weight(hx):
-    return hx.get_weight(1) / CAL_VAL
+    data = {
+        "val" : hx.get_weight(1),
+        "timestamp" : datetime.datetime.now()
+    }
+    return data
 
 #Prints data to terminal
-def print_data(val):
-    print(str(datetime.datetime.now()))
-    print("Current Weight:", val, "g\n")
+def print_data(data):
+    print(data['timestamp'])
+    print("Current Weight:", "{:0.2f}".format(data['val']), "g\n")
 
 #Creates data directory
 def create_dir():
@@ -62,37 +70,52 @@ def open_log():
 
 #Writes data to logfile
 def write_data_file(data, log):
-    log.write("{0},{1}\n".format(str(datetime.datetime.now()),str(data)))
+    log.write("{:},{:0.2f}\n".format(data['timestamp'], data['val']))
 
 #Returns the average of all data points in the list.
 def getAverage(arr):
     return (sum(arr[len(arr) - 5:len(arr) - 1])/5) + 2
 
+#Runs on connecting to topic
+def _on_connect(client, userdata, flags, rc):
+    if rc == 0:
+        print("Connected")
+        connected = True
+        print("..........")
+    else:
+        print("Unable To Connect")
+
+    client.subscribe(TOPIC)
+
 #Runs main script
 def main():
-    movingaverage = 1 #This is holds the moving average that will be used to determine recording frequency
-
     hx = init_sensor()
     keyboard.add_hotkey('0', hx.tare())
-    go = True
+    running = True
     slowmode = False #determines if slow mode is currently on
     subset = 0 #tracks the amount of subsets processed
     arr = []
     log = open_log()
+    
+    client = mqtt.Client(clean_session=True, client_id="client")
+    client.on_connect = _on_connect
+    #Connects & automatically starts seperate event loop/thread
+    print("Connecting to broker...")
+    client.connect(BROKER_ADDR)
+    client.loop_start()
 
     try:
-        while (go):
-            val = get_weight(hx)
-            valtime = datetime.datetime.now() #timestamp
-            arr.append(val)
-            print_data(val)
-            write_data_file(val, log)
-            movingaverage = getAverage(arr)
-
-
+        while (running):
+            data = get_weight(hx)
+            #arr.append(data['val'])
+            print_data(data)
+            write_data_file(data, log)
+            client.publish(TOPIC, "{:},{:.2f}".format(data['timestamp'], data['val']))
+            
             # UNUSED CODE
             # Determines recording frequency on weight increase
             '''
+            movingaverage = getAverage(arr)
             if(val < movingaverage):
                 sleep(0.4122) #slow mode, time.sleep makes rate two points/second
                 if(slowmode == False): #lets user know when slow mode is activated
@@ -114,10 +137,11 @@ def main():
             '''
 
             if keyboard.is_pressed('alt'):
-                go = False
+                running = False
 
     except (KeyboardInterrupt, SystemExit):
             cleanAndExit()
+            client.stop_loop()
 
 if __name__ == '__main__':
     main()
