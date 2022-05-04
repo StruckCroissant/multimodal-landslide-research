@@ -2,10 +2,16 @@
 
 import paho.mqtt.client as mqtt
 import time
+import pandas as pd
+import numpy as np
+from concurrent.futures import ThreadPoolExecutor as tex
+import json
+import matplotlib.pyplot as plt
 
 BROKER_ADDR = "192.168.0.130"
 TOPIC = "data/strain"
-data_array = list()
+strain_df = pd.DataFrame(columns=['timestamp', 'val'])
+strain_df = strain_df.set_index('timestamp')
 connected = False
 message_recieved = False
 
@@ -20,15 +26,16 @@ def on_connect(client, userdata, flags, rc):
     client.subscribe(TOPIC)
 
 def rec_data(client, userdata, msg):
-    contents = str(msg.payload.decode("utf-8")).split(",")
-    data = {
-        "timestamp" : contents[0],
-        "val" : contents[1]
-    }
-
-    print(data['timestamp'] + "," +  data['val'])
-    #data_array.append(data)
-
+    jstring = str(msg.payload.decode("utf-8"))
+    list = json.loads(jstring)
+    df = pd.DataFrame(list)
+    df = df.set_index('timestamp')
+    
+    global strain_df
+    strain_df = pd.concat([strain_df, df])
+    
+    print(strain_df)
+    
 def on_disconnect(client, userdata, rc):
     if rc != 0:
         print("Unexpected disconnect")
@@ -40,15 +47,15 @@ def main():
     client.on_message = rec_data
     client.on_connect = on_connect
     client.on_disconnect = on_disconnect
-    
-    
+
+
     print("Connecting to broker")
     client.connect(BROKER_ADDR)
-    
+
     print("Subscribing to topic", TOPIC)
     client.subscribe(TOPIC)
-    
-    
+
+
     try:
         client.loop_forever()
     except KeyboardInterrupt:

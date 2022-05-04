@@ -95,8 +95,6 @@ def main():
     hx = init_sensor()
     keyboard.add_hotkey('0', hx.tare())
     running = True
-    slowmode = False #determines if slow mode is currently on
-    subset = 0 #tracks the amount of subsets processed
     queue = list()
     log = open_log()
 
@@ -119,34 +117,6 @@ def main():
             queue.append(data)
             print_data(data)
             write_data_file(data, log)
-
-            # UNUSED CODE
-            # Determines recording frequency on weight increase
-            '''
-
-            if keyboard.is_pressed('alt'):
-                running = False
-
-            movingaverage = getAverage(arr)
-            if(val < movingaverage):
-                sleep(0.4122) #slow mode, time.sleep makes rate two points/second
-                if(slowmode == False): #lets user know when slow mode is activated
-                    slowmode = True
-                    print("Slow Mode ON")
-            else:
-                if(slowmode == True):
-                    slowmode = False
-                    print("Slow Mode is OFF")
-
-            if(len(arr) % 5 == 0): #once we have a new subset of 5, calculate average
-                subset = subset + 1
-                movingaverage = getAverage() #function calculates average
-                print("Current Moving Average:" + str(getAverage()))
-                print("Subset:" + str(subset)) #current subset
-                print("Array Length:" + str(len(arr))) #shows subsets are being calculated correctly
-                # Do moving average calculations
-                # Get a value for the average
-            '''
     except (KeyboardInterrupt, SystemExit):
             cleanAndExit()
             client.stop_loop()
