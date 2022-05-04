@@ -13,7 +13,6 @@ def on_connect(client, userdata, flags, rc):
     if rc == 0:
         print("Connected")
         connected = True
-        print("Connected")
         print("..........")
     else:
         print("Unable To Connect")
@@ -35,7 +34,8 @@ def on_disconnect(client, userdata, rc):
         print("Unexpected disconnect")
 
 def main():
-    client = mqtt.Client("MQTT")
+    print("Starting server...")
+    client = mqtt.Client(clean_session=True, client_id="server")
 
     client.on_message = rec_data
     client.on_connect = on_connect
@@ -44,7 +44,6 @@ def main():
     
     print("Connecting to broker")
     client.connect(BROKER_ADDR)
-    client.loop_start()
     
     print("Subscribing to topic", TOPIC)
     client.subscribe(TOPIC)
