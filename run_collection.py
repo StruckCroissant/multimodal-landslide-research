@@ -11,7 +11,10 @@ import RPi.GPIO as GPIO
 import paho.mqtt.client as mqtt
 from libraries.hx711 import HX711
 from signal import pause
+import json
+import concurrent.futures
 
+BACKLOG_SIZE = 20
 REF_UNIT = 100
 DOUT_PIN = 5
 PD_SCK_PIN = 6
@@ -40,15 +43,15 @@ def init_sensor():
 #Get weight reading from hx object, pair with timestamp
 def get_weight(hx):
     data = {
-        "val" : hx.get_weight(1),
-        "timestamp" : datetime.datetime.now()
+        "val" : "{:.2f}".format(hx.get_weight(1)),
+        "timestamp" : str(datetime.datetime.now())
     }
     return data
 
 #Prints data to terminal
 def print_data(data):
     print(data['timestamp'])
-    print("Current Weight:", "{:0.2f}".format(data['val']), "g\n")
+    print("Current Weight:", data['val'], "g\n")
 
 #Creates data directory
 def create_dir():
@@ -70,14 +73,14 @@ def open_log():
 
 #Writes data to logfile
 def write_data_file(data, log):
-    log.write("{:},{:0.2f}\n".format(data['timestamp'], data['val']))
+    log.write("{:},{:}\n".format(data['timestamp'], data['val']))
 
 #Returns the average of all data points in the list.
 def getAverage(arr):
     return (sum(arr[len(arr) - 5:len(arr) - 1])/5) + 2
 
 #Runs on connecting to topic
-def _on_connect(client, userdata, flags, rc):
+def on_connect(client, userdata, flags, rc):
     if rc == 0:
         print("Connected")
         connected = True
@@ -94,11 +97,11 @@ def main():
     running = True
     slowmode = False #determines if slow mode is currently on
     subset = 0 #tracks the amount of subsets processed
-    arr = []
+    queue = list()
     log = open_log()
     
     client = mqtt.Client(clean_session=True, client_id="client")
-    client.on_connect = _on_connect
+    client.on_connect = on_connect
     #Connects & automatically starts seperate event loop/thread
     print("Connecting to broker...")
     client.connect(BROKER_ADDR)
@@ -106,11 +109,18 @@ def main():
 
     try:
         while (running):
+            if len(queue) > BACKLOG_SIZE:
+                payload = json.dumps(queue)
+                with concurrent.futures.ThreadPoolExecutor() as ex:
+                    print("Sending Backlog...")
+                    t = ex.submit(client.publish, TOPIC, payload)
+                queue = []
+            
             data = get_weight(hx)
-            #arr.append(data['val'])
-            print_data(data)
+            queue.append(data)
+            #print_data(data)
             write_data_file(data, log)
-            client.publish(TOPIC, "{:},{:.2f}".format(data['timestamp'], data['val']))
+            
             
             # UNUSED CODE
             # Determines recording frequency on weight increase
