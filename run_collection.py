@@ -12,7 +12,7 @@ import paho.mqtt.client as mqtt
 from libraries.hx711 import HX711
 from signal import pause
 import json
-import concurrent.futures.ThreadPoolExecutor as tex
+from concurrent.futures import ThreadPoolExecutor as tex
 
 BACKLOG_SIZE = 20
 REF_UNIT = 100
@@ -112,7 +112,7 @@ def main():
             if len(queue) > BACKLOG_SIZE:
                 payload = json.dumps(queue)
                 print("Sending Backlog...")
-                t = tex.submit(client.publish, TOPIC, payload)
+                client.publish(TOPIC, payload)
                 queue = []
 
             data = get_weight(hx)
