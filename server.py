@@ -21,12 +21,8 @@ def on_connect(client, userdata, flags, rc):
 
 def rec_data(client, userdata, msg):
     contents = str(msg.payload.decode("utf-8")).split(",")
-    data = {
-        "timestamp" : contents[0],
-        "val" : contents[1]
-    }
 
-    print(data['timestamp'] + "," +  data['val'])
+    print(contents)
     #data_array.append(data)
 
 def on_disconnect(client, userdata, rc):
