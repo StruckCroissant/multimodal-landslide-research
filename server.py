@@ -8,6 +8,7 @@ from concurrent.futures import ThreadPoolExecutor as tex
 import json
 import matplotlib.pyplot as plt
 
+DEBUG_MODE = False
 BROKER_ADDR = "192.168.0.130"
 TOPIC = "data/strain"
 strain_df = pd.DataFrame(columns=['timestamp', 'val'])
