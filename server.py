@@ -13,6 +13,8 @@ import matplotlib.pyplot as plt
 DEBUG_MODE = False
 BROKER_ADDR = "192.168.0.130"
 TOPIC = "data/strain"
+LOG_DIRECTORY_PARENT = "./data/"
+DEFAULT_LOGFILE = "Strain_Data_Server.csv"
 strain_df = pd.DataFrame(columns=['timestamp', 'val'])
 connected = False
 message_recieved = False
