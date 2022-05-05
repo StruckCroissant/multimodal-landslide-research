@@ -9,26 +9,30 @@ import keyboard
 import glob
 import paho.mqtt.client as mqtt
 import json
+
+import libraries
 from libraries import *
 from concurrent.futures import ThreadPoolExecutor as tex
 
-
+DEBUG_MODE = True
+RPI_OS = libraries.RPi_OS
+LOGFILE = "Strain_Data.csv"
+LOG_DIRECTORY_PARENT = "./data/"
+TOPIC = "data/strain"
+BROKER_ADDR = "192.168.0.130"
 BACKLOG_SIZE = 20
 REF_UNIT = 100
 DOUT_PIN = 5
 PD_SCK_PIN = 6
 CAL_VAL = 2.1745
-LOGFILE = "Strain_Data.csv"
-LOG_DIRECTORY_PARENT = "./data/"
-TOPIC = "data/strain"
-BROKER_ADDR = "192.168.0.130"
 connected = False
 
 
 # Exit Function
 def cleanAndExit():
     print("Cleaning.")
-    GPIO.cleanup()
+    if RPi_OS:
+        GPIO.cleanup()
     print("Bye.")
     sys.exit()
 
@@ -46,7 +50,7 @@ def init_sensor():
 # Get weight reading from hx object, pair with timestamp
 def get_weight(hx):
     data = {
-        "val": "{:.2f}".format(hx.get_weight(1)/CAL_VAL),
+        "val": "{:.2f}".format(hx.get_weight(1) / CAL_VAL),
         "timestamp": str(datetime.datetime.now())
     }
     return data
@@ -80,7 +84,7 @@ def open_log():
 
 # Writes data to logfile
 def write_data_file(data, log):
-    log.write("{:},{:0.2f}\n".format(data['timestamp'], float(data['val'])))
+    log.write("{:},{:}\n".format(data['timestamp'], float(data['val'])))
 
 
 # Runs on connecting to topic
@@ -92,10 +96,13 @@ def on_connect(client, userdata, flags, rc):
     else:
         print("Unable To Connect")
 
+    # Automatically subscribes to topic upon reconnect
     client.subscribe(TOPIC)
+
 
 # Runs main script
 def main():
+    print("Starting up...")
     hx = init_sensor()
     running = True
     queue = list()
@@ -106,13 +113,16 @@ def main():
     print("Connecting to broker...")
 
     try:
-        client.connect(BROKER_ADDR)
-        client.loop_start()
+        if not DEBUG_MODE:
+            client.connect(BROKER_ADDR)
+            client.loop_start()
+        else:
+            print("Debug mode enabled, disabling MQTT publishing & file writing\n")
+            input("Press enter to start data collection...")
 
     except:
         user_input = input("Failed to connect to broker, continue? (Y/n)")
         user_input.lower().strip()
-
         if user_input == 'n':
             running = False
 
@@ -127,7 +137,8 @@ def main():
             data = get_weight(hx)
             queue.append(data)
             print_data(data)
-            write_data_file(data, log)
+            if not DEBUG_MODE:
+                write_data_file(data, log)
 
     except (KeyboardInterrupt, SystemExit):
         cleanAndExit()
