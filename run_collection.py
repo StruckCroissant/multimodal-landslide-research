@@ -14,7 +14,7 @@ import libraries
 from libraries import *
 from concurrent.futures import ThreadPoolExecutor as tex
 
-DEBUG_MODE = True
+DEBUG_MODE = False
 RPI_OS = libraries.RPi_OS
 LOGFILE = "Strain_Data.csv"
 LOG_DIRECTORY_PARENT = "./data/"
@@ -67,7 +67,7 @@ def create_dir():
     try:
         os.mkdir(LOG_DIRECTORY_PARENT)
     except OSError as error:
-        print("Data directory exists")
+        print("Data directory exists\n")
 
 
 # Opens & returns log object
