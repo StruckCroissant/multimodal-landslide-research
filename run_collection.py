@@ -19,20 +19,22 @@ REF_UNIT = 100
 DOUT_PIN = 5
 PD_SCK_PIN = 6
 CAL_VAL = 2.1745
-LOGFILE = "Strain_Data.csv"
+DEFAULT_LOGFILE = "Strain_Data_Local.csv"
 LOG_DIRECTORY_PARENT = "./data/"
 TOPIC = "data/strain"
 BROKER_ADDR = "192.168.0.130"
 connected = False
 
-#Exit Function
+
+# Exit Function
 def cleanAndExit():
     print("Cleaning.")
     GPIO.cleanup()
     print("Bye.")
     sys.exit()
 
-#Initialize hx object
+
+# Initialize hx object
 def init_sensor():
     hx = HX711(DOUT_PIN, PD_SCK_PIN)
     hx.set_reference_unit(REF_UNIT)
@@ -40,30 +42,34 @@ def init_sensor():
     hx.tare()
     return hx
 
-#Get weight reading from hx object, pair with timestamp
+
+# Get weight reading from hx object, pair with timestamp
 def get_weight(hx):
     data = {
-        "val" : "{:.2f}".format(hx.get_weight(1)),
-        "timestamp" : str(datetime.datetime.now())
+        "val": "{:.2f}".format(hx.get_weight(1)),
+        "timestamp": str(datetime.datetime.now())
     }
     return data
 
-#Prints data to terminal
+
+# Prints data to terminal
 def print_data(data):
     print(data['timestamp'])
     print("Current Weight:", data['val'], "g\n")
 
-#Creates data directory
+
+# Creates data directory
 def create_dir():
     try:
         os.mkdir(LOG_DIRECTORY_PARENT)
     except OSError as error:
         print("Data directory exists")
 
-#Opens & returns log object
+
+# Opens & returns log object
 def open_log():
     create_dir()
-    filename = LOGFILE
+    filename = DEFAULT_LOGFILE
     if len(sys.argv) > 1:
         filename = sys.argv[1]
 
@@ -71,15 +77,18 @@ def open_log():
     log = open(filename, "a")
     return log
 
-#Writes data to logfile
+
+# Writes data to logfile
 def write_data_file(data, log):
-    log.write("{:},{:0.2f}\n".format(data['timestamp'], float(data['val'])))
+    log.write("{:},{:}\n".format(data['timestamp'], float(data['val'])))
 
-#Returns the average of all data points in the list.
+
+# Returns the average of all data points in the list.
 def getAverage(arr):
-    return (sum(arr[len(arr) - 5:len(arr) - 1])/5) + 2
+    return (sum(arr[len(arr) - 5:len(arr) - 1]) / 5) + 2
 
-#Runs on connecting to topic
+
+# Runs on connecting to topic
 def on_connect(client, userdata, flags, rc):
     if rc == 0:
         print("Connected")
@@ -90,7 +99,8 @@ def on_connect(client, userdata, flags, rc):
 
     client.subscribe(TOPIC)
 
-#Runs main script
+
+# Runs main script
 def main():
     hx = init_sensor()
     keyboard.add_hotkey('0', hx.tare())
@@ -100,7 +110,7 @@ def main():
 
     client = mqtt.Client(clean_session=True, client_id="client")
     client.on_connect = on_connect
-    #Connects & automatically starts seperate event loop/thread
+    # Connects & automatically starts seperate event loop/thread
     print("Connecting to broker...")
     client.connect(BROKER_ADDR)
     client.loop_start()
@@ -118,8 +128,10 @@ def main():
             print_data(data)
             write_data_file(data, log)
     except (KeyboardInterrupt, SystemExit):
-            cleanAndExit()
-            client.stop_loop()
+        cleanAndExit()
+        client.stop_loop()
+        log.close()
+
 
 if __name__ == '__main__':
     main()
