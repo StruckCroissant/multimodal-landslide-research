@@ -121,7 +121,7 @@ while (go):
             Time it takes for each point is about 0.0878 s.
         '''
             
-        val = (hx2.get_weight(1)) / 2.1745#Fast mode
+        val = (get_weight(1)) / 2.1745#Fast mode
         valtime = datetime.datetime.now() #timestamp
         arr2.append(val)
         #print("Scale 2 Weight: " + str(val))

@@ -10,8 +10,7 @@ from concurrent.futures import ThreadPoolExecutor as tex
 import json
 import matplotlib.pyplot as plt
 
-DEFAULT_LOGFILE = "Strain_Data_Server.csv"
-LOG_DIRECTORY_PARENT = "./data/"
+DEBUG_MODE = False
 BROKER_ADDR = "192.168.0.130"
 TOPIC = "data/strain"
 strain_df = pd.DataFrame(columns=['timestamp', 'val'])
@@ -41,6 +40,7 @@ def open_log():
 def on_connect(client, userdata, flags, rc):
     if rc == 0:
         print("Connected")
+        global connected
         connected = True
         print("..........")
     else:
@@ -51,8 +51,7 @@ def on_connect(client, userdata, flags, rc):
 
 def rec_data(client, userdata, msg):
     jstring = str(msg.payload.decode("utf-8"))
-    list = json.loads(jstring)
-    df = pd.DataFrame(list)
+    df = pd.DataFrame(json.loads(jstring))
     df = df.set_index('timestamp')
 
     global strain_df
