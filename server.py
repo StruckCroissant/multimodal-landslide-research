@@ -37,7 +37,7 @@ TOPIC = master_settings['strain_topic']
 LOG_DIRECTORY_PARENT = master_settings['log_directory_parent']
 today = dt.now()
 LOGFILE = server_settings['default_logfile'] + \
-          "_{:02d}{:02d}{:}".format(today.day, today.month, today.year)
+          "_{:02d}{:02d}{:}".format(today.day, today.month, today.year) + ".csv"
 
 
 # Creates data directory
