@@ -47,7 +47,7 @@ CAL_VAL = client_settings['calibration_value']
 
 today = dt.now()
 LOGFILE = client_settings['default_logfile'] + \
-          "_{:02d}{:02d}{:}".format(today.day, today.month, today.year)
+          "_{:02d}{:02d}{:}".format(today.day, today.month, today.year) + ".csv"
 
 
 def clean_and_exit() -> None:
