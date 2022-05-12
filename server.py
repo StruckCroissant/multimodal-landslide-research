@@ -12,17 +12,32 @@ from concurrent.futures import ThreadPoolExecutor as tex
 import json
 import matplotlib.pyplot as plt
 
-# Initializing global variables
-BROKER_ADDR = str()
-TOPIC = str()
-LOG_DIRECTORY_PARENT = str()
-LOGFILE = str()
-
 # Local settings
+SETTINGS_FILE = "settings.json"
 DEBUG_MODE = False
 strain_df = pd.DataFrame(columns=['timestamp', 'val'])
 connected = False
 message_recieved = False
+
+# Initializing global variables
+try:
+    fh = open(SETTINGS_FILE)
+    js_settings = json.load(fh)
+except FileNotFoundError:
+    opt = "n"
+    opt = input("Settings file not found; continue? (y/N)").strip().lower()
+    if opt == "n":
+        sys.exit()
+
+server_settings = js_settings['server']
+master_settings = js_settings['master']
+
+BROKER_ADDR = master_settings['broker_address']
+TOPIC = master_settings['strain_topic']
+LOG_DIRECTORY_PARENT = master_settings['log_directory_parent']
+today = dt.now()
+LOGFILE = server_settings['default_logfile'] + \
+          "_{:02d}{:02d}{:}".format(today.day, today.month, today.year)
 
 
 # Creates data directory
@@ -73,31 +88,6 @@ def on_disconnect(client, userdata, rc):
         print("Unexpected disconnect")
 
 
-def _load_settings() -> None:
-    try:
-        fh = open("settings.json")
-        js_settings = json.load(fh)
-    except FileNotFoundError:
-        opt = "n"
-        opt = input("Settings file not found; continue? (y/N)").strip().lower()
-        if opt == "n":
-            sys.exit()
-
-    server_settings = js_settings['server']
-    master_settings = js_settings['master']
-
-    global BROKER_ADDR
-    global TOPIC
-    global LOG_DIRECTORY_PARENT
-    global LOGFILE
-    BROKER_ADDR = master_settings['broker_address']
-    TOPIC = master_settings['strain_topic']
-    LOG_DIRECTORY_PARENT = master_settings['log_directory_parent']
-    today = dt.now()
-    LOGFILE = server_settings['default_logfile'] + \
-        "_{:02d}{:02d}{:}".format(today.day, today.month, today.year)
-
-
 def _init():
     print("Initializing...")
     global strain_df
@@ -131,5 +121,4 @@ def main():
 
 if __name__ == "__main__":
     _init()
-    _load_settings()
     main()

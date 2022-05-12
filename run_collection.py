@@ -22,52 +22,32 @@ except ImportError:
 
 # Initializing global variables
 SETTINGS_FILE = "settings.json"
-BACKLOG_SIZE = int()
-REF_UNIT = int()
-DOUT_PIN = int()
-PD_SCK_PIN = int()
-CAL_VAL = int()
-LOGFILE = str()
-LOG_DIRECTORY_PARENT = str()
-TOPIC = str()
-BROKER_ADDR = str()
 DEBUG_MODE = False
 connected = False
 
+try:
+    fh = open(SETTINGS_FILE)
+    js_settings = json.load(fh)
+except FileNotFoundError:
+    opt = input("Settings file not found; continue? (y/N)") or "n"
+    if opt == "n":
+        print("Exiting...")
+        sys.exit()
 
-def _load_settings() -> None:
-    try:
-        fh = open(SETTINGS_FILE)
-        js_settings = json.load(fh)
-    except FileNotFoundError:
-        opt = input("Settings file not found; continue? (y/N)") or "n"
-        if opt == "n":
-            print("Exiting...")
-            sys.exit()
+client_settings = js_settings['client']
+master_settings = js_settings['master']
+LOG_DIRECTORY_PARENT = master_settings['log_directory_parent']
+TOPIC = master_settings['strain_topic']
+BROKER_ADDR = master_settings['broker_address']
+BACKLOG_SIZE = client_settings['backlog_size']
+REF_UNIT = client_settings['ref_unit']
+DOUT_PIN = client_settings['dout_pin']
+PD_SCK_PIN = client_settings['pd_sck_pin']
+CAL_VAL = client_settings['calibration_value']
 
-    client_settings = js_settings['client']
-    master_settings = js_settings['master']
-
-    global LOG_DIRECTORY_PARENT
-    global TOPIC
-    global BROKER_ADDR
-    global BACKLOG_SIZE
-    global REF_UNIT
-    global DOUT_PIN
-    global PD_SCK_PIN
-    global CAL_VAL
-    LOG_DIRECTORY_PARENT = master_settings['log_directory_parent']
-    TOPIC = master_settings['strain_topic']
-    BROKER_ADDR = master_settings['broker_address']
-    BACKLOG_SIZE = client_settings['backlog_size']
-    REF_UNIT = client_settings['ref_unit']
-    DOUT_PIN = client_settings['dout_pin']
-    PD_SCK_PIN = client_settings['pd_sck_pin']
-    CAL_VAL = client_settings['calibration_value']
-
-    today = dt.now()
-    LOGFILE = client_settings['default_logfile'] + \
-              "_{:02d}{:02d}{:}".format(today.day, today.month, today.year)
+today = dt.now()
+LOGFILE = client_settings['default_logfile'] + \
+          "_{:02d}{:02d}{:}".format(today.day, today.month, today.year)
 
 
 def clean_and_exit() -> None:
@@ -226,5 +206,4 @@ def main() -> None:
 
 
 if __name__ == '__main__':
-    _load_settings()
     main()
