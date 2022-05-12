@@ -2,30 +2,72 @@
 | Runs data collection on HX711 sensor, writes to file, and publishes to MQTT topic automatically
 """
 
-#!/usr/bin/python3
+# !/usr/bin/python3
 
+from datetime import datetime as dt
 import sys
 import os
 import datetime
 import keyboard
 import paho.mqtt.client as mqtt
 import json
-
 import libraries
-from libraries import HX711, GPIO
 
+try:
+    import RPi.GPIO as GPIO
+    from libraries.hx711 import HX711
+except ImportError:
+    print("Non-rpi OS detected... \n simulating HX711")
+    from libraries.emulated_hx711 import HX711
+
+# Initializing global variables
+SETTINGS_FILE = "settings.json"
+BACKLOG_SIZE = int()
+REF_UNIT = int()
+DOUT_PIN = int()
+PD_SCK_PIN = int()
+CAL_VAL = int()
+LOGFILE = str()
+LOG_DIRECTORY_PARENT = str()
+TOPIC = str()
+BROKER_ADDR = str()
 DEBUG_MODE = False
-RPI_OS = libraries.RPi_OS
-BACKLOG_SIZE = 20
-REF_UNIT = 100
-DOUT_PIN = 5
-PD_SCK_PIN = 6
-CAL_VAL = 2.1745
-DEFAULT_LOGFILE = "Strain_Data_Local.csv"
-LOG_DIRECTORY_PARENT = "./data/"
-TOPIC = "data/strain"
-BROKER_ADDR = "192.168.0.130"
 connected = False
+
+
+def _load_settings() -> None:
+    try:
+        fh = open(SETTINGS_FILE)
+        js_settings = json.load(fh)
+    except FileNotFoundError:
+        opt = input("Settings file not found; continue? (y/N)") or "n"
+        if opt == "n":
+            print("Exiting...")
+            sys.exit()
+
+    client_settings = js_settings['client']
+    master_settings = js_settings['master']
+
+    global LOG_DIRECTORY_PARENT
+    global TOPIC
+    global BROKER_ADDR
+    global BACKLOG_SIZE
+    global REF_UNIT
+    global DOUT_PIN
+    global PD_SCK_PIN
+    global CAL_VAL
+    LOG_DIRECTORY_PARENT = master_settings['log_directory_parent']
+    TOPIC = master_settings['strain_topic']
+    BROKER_ADDR = master_settings['broker_address']
+    BACKLOG_SIZE = client_settings['backlog_size']
+    REF_UNIT = client_settings['ref_unit']
+    DOUT_PIN = client_settings['dout_pin']
+    PD_SCK_PIN = client_settings['pd_sck_pin']
+    CAL_VAL = client_settings['calibration_value']
+
+    today = dt.now()
+    LOGFILE = client_settings['default_logfile'] + \
+              "_{:02d}{:02d}{:}".format(today.day, today.month, today.year)
 
 
 def clean_and_exit() -> None:
@@ -34,10 +76,13 @@ def clean_and_exit() -> None:
     :return: none
     """
     print("Cleaning.")
-    if libraries.RPi_OS:
+    try:
         GPIO.cleanup()
-    print("Bye.")
-    sys.exit()
+    except NameError:
+        print("Non-RPi OS detected - skpping clean...")
+    finally:
+        print("Bye.")
+        sys.exit()
 
 
 def init_sensor() -> HX711:
@@ -93,7 +138,7 @@ def open_log() -> open:
     :return: open object
     """
     create_dir()
-    filename = DEFAULT_LOGFILE
+    filename = LOGFILE
     if len(sys.argv) > 1:
         filename = sys.argv[1]
 
@@ -159,26 +204,27 @@ def main() -> None:
         user_input = input("Failed to connect to broker, continue? (Y/n)").lower().strip()
         if user_input == 'n':
             running = False
-    finally:
-        try:
-            # Main data collection loop
-            while running:
-                if len(queue) > BACKLOG_SIZE:
-                    payload = json.dumps(queue)
-                    print("Sending Backlog...")
-                    client.publish(TOPIC, payload)
-                    queue = []
-                data = get_weight(hx)
-                queue.append(data)
-                print_data(data)
-                if not DEBUG_MODE:
-                    write_data_file(data, log)
-        except (KeyboardInterrupt, SystemExit):
-            clean_and_exit()
-            client.stop_loop()
+
+    try:
+        # Main data collection loop
+        while running:
+            if len(queue) > BACKLOG_SIZE:
+                payload = json.dumps(queue)
+                print("Sending Backlog...")
+                client.publish(TOPIC, payload)
+                queue = []
+            data = get_weight(hx)
+            queue.append(data)
+            print_data(data)
+            if not DEBUG_MODE:
+                write_data_file(data, log)
+    except (KeyboardInterrupt, SystemExit):
+        clean_and_exit()
+        client.stop_loop()
 
     log.close()
 
 
 if __name__ == '__main__':
+    _load_settings()
     main()

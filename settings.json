@@ -1,0 +1,18 @@
+{
+  "client": {
+    "backlog_size": 20,
+    "ref_unit": 100,
+    "dout_pin": 5,
+    "pd_sck_pin": 6,
+    "calibration_value": 2.1745,
+    "default_logfile": "Strain_Data_Client"
+  },
+  "server": {
+    "default_logfile": "Strain_Data_server"
+  },
+  "master": {
+    "strain_topic": "data/strain",
+    "broker_address": "192.168.0.159",
+    "log_directory_parent": "./data/"
+  }
+}

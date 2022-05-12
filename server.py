@@ -1,6 +1,8 @@
 #!/usr/bin/python3
+from datetime import datetime as dt
 import os
 import sys
+from socket import socket
 
 import paho.mqtt.client as mqtt
 import time
@@ -10,14 +12,18 @@ from concurrent.futures import ThreadPoolExecutor as tex
 import json
 import matplotlib.pyplot as plt
 
+# Initializing global variables
+BROKER_ADDR = str()
+TOPIC = str()
+LOG_DIRECTORY_PARENT = str()
+LOGFILE = str()
+
+# Local settings
 DEBUG_MODE = False
-BROKER_ADDR = "192.168.0.130"
-TOPIC = "data/strain"
-LOG_DIRECTORY_PARENT = "./data/"
-DEFAULT_LOGFILE = "Strain_Data_Server.csv"
 strain_df = pd.DataFrame(columns=['timestamp', 'val'])
 connected = False
 message_recieved = False
+
 
 # Creates data directory
 def create_dir():
@@ -30,7 +36,7 @@ def create_dir():
 # Opens & returns log object
 def open_log():
     create_dir()
-    filename = DEFAULT_LOGFILE
+    filename = LOGFILE
     if len(sys.argv) > 1:
         filename = sys.argv[1]
 
@@ -67,9 +73,36 @@ def on_disconnect(client, userdata, rc):
         print("Unexpected disconnect")
 
 
+def _load_settings() -> None:
+    try:
+        fh = open("settings.json")
+        js_settings = json.load(fh)
+    except FileNotFoundError:
+        opt = "n"
+        opt = input("Settings file not found; continue? (y/N)").strip().lower()
+        if opt == "n":
+            sys.exit()
+
+    server_settings = js_settings['server']
+    master_settings = js_settings['master']
+
+    global BROKER_ADDR
+    global TOPIC
+    global LOG_DIRECTORY_PARENT
+    global LOGFILE
+    BROKER_ADDR = master_settings['broker_address']
+    TOPIC = master_settings['strain_topic']
+    LOG_DIRECTORY_PARENT = master_settings['log_directory_parent']
+    today = dt.now()
+    LOGFILE = server_settings['default_logfile'] + \
+        "_{:02d}{:02d}{:}".format(today.day, today.month, today.year)
+
+
 def _init():
+    print("Initializing...")
     global strain_df
     strain_df = strain_df.set_index('timestamp')
+
 
 def main():
     print("Starting server...")
@@ -79,8 +112,12 @@ def main():
     client.on_connect = on_connect
     client.on_disconnect = on_disconnect
 
-    print("Connecting to broker")
-    client.connect(BROKER_ADDR)
+    try:
+        print("Connecting to broker")
+        client.connect(BROKER_ADDR)
+    except OSError:
+        print("Broker Connection failed. Exiting...")
+        sys.exit()
 
     print("Subscribing to topic", TOPIC)
     client.subscribe(TOPIC)
@@ -94,4 +131,5 @@ def main():
 
 if __name__ == "__main__":
     _init()
+    _load_settings()
     main()
